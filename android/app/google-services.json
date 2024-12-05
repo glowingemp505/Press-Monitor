@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "627472591146",
+    "project_id": "pressmonitor-e6e32",
+    "storage_bucket": "pressmonitor-e6e32.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:627472591146:android:d8db807ffabf34e66b5653",
+        "android_client_info": {
+          "package_name": "com.pressmonitor.v20231216"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "627472591146-2ne8ei6cbjp8r5apvehdngqcr8q567gs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pressmonitor.v20231216",
+            "certificate_hash": "aacadda80d127b8d36dd6dabb557358bdbc49d05"
+          }
+        },
+        {
+          "client_id": "627472591146-npoalb1bcl5idv7mmrv71ob5rpeqafhs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCRo_9qVT1it7AUXb364ZP_-aYS_YzqE8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "627472591146-npoalb1bcl5idv7mmrv71ob5rpeqafhs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "627472591146-qo16h6sk1n4dk0kpmbdrkcuf4a2l1a87.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pressmonitor.v20231216"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

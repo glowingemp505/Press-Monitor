@@ -1,4 +1,4 @@
-package com.pressmonitor
+package com.pressmonitor.v20231216
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

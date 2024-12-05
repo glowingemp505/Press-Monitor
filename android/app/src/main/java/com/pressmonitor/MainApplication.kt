@@ -1,4 +1,4 @@
-package com.pressmonitor
+package com.pressmonitor.v20231216
 
 import android.app.Application
 import com.facebook.react.PackageList
