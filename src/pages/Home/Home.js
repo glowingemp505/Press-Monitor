@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState , useEffect } from 'react';
 import {
   View,
   Image,
@@ -8,11 +8,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Clipboard,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNotification } from '../../notifcation_provider/NotificationProvider';
 
-const Dashboard = ({ navigation }) => {
+const Dashboard = ({ navigation , route}) => {
+
+  const { fcmToken } = route.params;
+
+  const handleCopy = () => {
+    Clipboard.setString(fcmToken); // Copies the fcmToken to clipboard
+    // Optionally, show a toast or alert to inform the user the token has been copied
+    alert('FCM Token copied to clipboard!');
+  };
+
+ 
+
   const webviewRef = useRef(null); // Create a reference to the WebView
   const {  hasNewNotification } = useNotification();
 
@@ -72,7 +84,19 @@ onPress={handleNotificationPress}>
 
 
 )  :  (
-  <TouchableOpacity
+
+  <View style={{ flexDirection: 'row' }}>
+
+  
+<TouchableOpacity style={styles.notification} onPress={handleCopy}>
+      <Image
+        source={require('../../../assets/icons/icons8-copy-72.png')}
+        style={styles.notificationImage}
+        resizeMode="contain"
+      />
+    </TouchableOpacity>
+
+<TouchableOpacity
 style={styles.notification}
 onPress={handleNotificationPress}>
 <Image
@@ -81,6 +105,10 @@ onPress={handleNotificationPress}>
   resizeMode="contain"
 />
 </TouchableOpacity>
+</View>
+
+
+
 
 )
 

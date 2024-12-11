@@ -19,6 +19,7 @@ LogBox.ignoreAllLogs();
   const [loader, setLoader] = useState(true);
   const { addNotification } = useNotification();
 
+  const [fcmToken, setFcmToken] = useState('');
  
 
   useEffect(() => {
@@ -57,7 +58,11 @@ LogBox.ignoreAllLogs();
         }
         const token = await messaging().getToken();
         // dispatch(setfcmToken(token));
+        
+        setFcmToken(token);
+
         console.log("fcm token", token);
+
       } catch (error) {
         console.log("Error generating FCM token:", error);
       }
@@ -136,12 +141,23 @@ LogBox.ignoreAllLogs();
       }
     };
   }, []);
+
+
+  useEffect(() => {
+    if (fcmToken) {
+        console.log("Insane FCM Token:", fcmToken); // Log token when it changes
+    }
+}, [fcmToken]);
+
   return (
-    <View style={{flex:1}}>
+    
   
  
-      {loader ? <Splash /> : <Route />}
+  <View style={{ flex: 1 }}>
+        {loader ? <Splash /> : <Route fcmToken={fcmToken} />}
+  
    
+    
     </View>
   )
 }
