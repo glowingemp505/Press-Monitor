@@ -61,7 +61,7 @@ LogBox.ignoreAllLogs();
         
         setFcmToken(token);
 
-        console.log("fcm token", token);
+        
 
       } catch (error) {
         console.log("Error generating FCM token:", error);

@@ -1,59 +1,87 @@
-import React, { useRef, useState , useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Image,
+  Dimensions,
   TouchableOpacity,
   StyleSheet,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Clipboard,
+  Alert,
+  Text,
+  RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useNotification } from '../../notifcation_provider/NotificationProvider';
+import CookieManager from '@react-native-cookies/cookies';
+import Pdf from 'react-native-pdf';
+import RNFetchBlob from 'react-native-blob-util';
 
-const Dashboard = ({ navigation , route}) => {
+const Dashboard = ({ navigation, route }) => {
+  const useWebKit = true;
+
+  RNFetchBlob.config({
+    trusty: true,
+  });
 
   const { fcmToken } = route.params;
+  const webviewRef = useRef(null);
+  const [showPdf, setShowPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState('');
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
+  const [webViewUrl, setWebViewUrl] = useState(`https://mapp2.pressmonitor.co.in/?fcm_token=${fcmToken}`);
+  const [refreshing, setRefreshing] = useState(false); // Refresh state
 
-  const handleCopy = () => {
-    Clipboard.setString(fcmToken); // Copies the fcmToken to clipboard
-    // Optionally, show a toast or alert to inform the user the token has been copied
-    alert('FCM Token copied to clipboard!');
-  };
+  const [pdfDimensions, setPdfDimensions] = useState({
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  });
 
- 
-
-  const webviewRef = useRef(null); // Create a reference to the WebView
-  const {  hasNewNotification } = useNotification();
-
-  // Function to handle notification icon press
-  const handleNotificationPress = () => {
-    navigation.navigate('Notification'); // Ensure 'Notifications' matches the name in the navigator
-  };
-
-  // Function to go back in WebView
-  const handleGoBack = () => {
-    if (webviewRef.current) {
-      webviewRef.current.goBack();
+  const handleGetCookies = async () => {
+    try {
+      const cookies = await CookieManager.get(webViewUrl, useWebKit);
+      if (cookies && Object.keys(cookies).length > 0) {
+        Alert.alert('Cookies', JSON.stringify(cookies));
+      } else {
+        Alert.alert('No Cookies Found', 'The domain did not return any cookies.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to retrieve cookies.');
     }
   };
 
-  // Function to go forward in WebView
-  const handleGoForward = () => {
-    if (webviewRef.current) {
-      webviewRef.current.goForward();
+  const handleNavigationRequest = (request) => {
+    const { url } = request;
+    if (url.toLowerCase().includes('.pdf')) {
+      setPdfUrl(url);
+      setShowPdf(true);
+      return false; // Prevent WebView from navigating to the PDF
     }
+    return true;
   };
 
-  // Function to refresh the WebView
+  // Pull-to-refresh handler
   const handleRefresh = () => {
-    if (webviewRef.current) {
-      webviewRef.current.reload();
-    }
+    setRefreshing(true);
+    webviewRef.current.reload(); // Reload the WebView content
+    setRefreshing(false);
   };
 
+  // Listen to orientation changes and adjust dimensions
+  useEffect(() => {
+    const updatePdfDimensions = () => {
+      setPdfDimensions({
+        width: Dimensions.get('window').width,
+        height: Dimensions.get('window').height,
+      });
+    };
+
+    const subscription = Dimensions.addEventListener('change', updatePdfDimensions);
+    return () => subscription?.remove();
+  }, []);
 
   return (
     <KeyboardAvoidingView
@@ -61,109 +89,90 @@ const Dashboard = ({ navigation , route}) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <StatusBar barStyle="light-content" backgroundColor="#3E5B66" />
       <View style={styles.container}>
-        {/* Header Section */}
         <View style={styles.header}>
-          {/* App Logo */}
-          <Image
-            source={require('../../../assets/images/splashLogo.png')}
-            style={styles.logo}
-          />
-
-          {/* Notification Icon */}
-{hasNewNotification ? (
-
-<TouchableOpacity
-style={styles.notification}
-onPress={handleNotificationPress}>
-<Image
-  source={require('../../../assets/icons/notif-dot-bell.png')}
-  style={styles.notificationImage}
-  resizeMode="contain"
-/>
-</TouchableOpacity>
-
-
-)  :  (
-
-  <View style={{ flexDirection: 'row' }}>
-
-  
-<TouchableOpacity style={styles.notification} onPress={handleCopy}>
-      <Image
-        source={require('../../../assets/icons/icons8-copy-72.png')}
-        style={styles.notificationImage}
-        resizeMode="contain"
-      />
-    </TouchableOpacity>
-
-<TouchableOpacity
-style={styles.notification}
-onPress={handleNotificationPress}>
-<Image
-  source={require('../../../assets/icons/notification.png')}
-  style={styles.notificationImage}
-  resizeMode="contain"
-/>
-</TouchableOpacity>
-</View>
-
-
-
-
-)
-
-}
-        
-
-
-
+          {/* Header content can go here */}
         </View>
 
-        {/* WebView Section */}
-        <View style={{ flex: 1 }}>
-       
+        <View style={[styles.webViewContainer, showPdf && styles.hidden]}>
+          <ScrollView
+            contentContainerStyle={{ flex: 1 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }>
+            <WebView
+              ref={webviewRef}
+              source={{ uri: webViewUrl }}
+              style={styles.webView}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              startInLoadingState={true}
+              renderLoading={() => <ActivityIndicator size="large" />}
+              onShouldStartLoadWithRequest={handleNavigationRequest}
+              onNavigationStateChange={(navState) => {
+                setCanGoBack(navState.canGoBack);
+                setCanGoForward(navState.canGoForward);
+                setWebViewUrl(navState.url); // Save the current WebView URL
+              }}
+            />
+          </ScrollView>
+          <View style={styles.navigationContainer}>
+            <TouchableOpacity
+              disabled={!canGoBack}
+              onPress={() => webviewRef.current.goBack()}
+              style={[styles.navButton, !canGoBack && styles.disabledButton]}>
+              <View>
+              <Image
+  source={require('../../../assets/icons/icons8-back-48.png')}
+  style={{ height: 20, width: 20 }}
+/>
 
-          <WebView
-            ref={webviewRef}
-            source={{ uri: 'https://mapp.pressmonitor.co.in/' }}
-            style={styles.webView}
-            scrollEnabled={true} // Enable scrolling by touch
-            allowsFullscreenVideo={true} // Optional, if you want fullscreen support for videos
-            javaScriptEnabled={true} // Ensure JavaScript is enabled for better interaction
-            domStorageEnabled={true} // Ensure DOM storage is enabled
-            startInLoadingState={true}
-          renderLoading={() => <ActivityIndicator size="large" />}// Trigger when loading finishes
-          />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              disabled={!canGoForward}
+              onPress={() => webviewRef.current.goForward()}
+              style={[styles.navButton, !canGoForward && styles.disabledButton]}>
+                  <View>
+              <Image
+  source={require('../../../assets/icons/icons8-back-48-2.png')}
+  style={{ height: 20, width: 20 }}
+/>
+
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Bottom Navigation Buttons */}
-        <View style={styles.bottomNav}>
-          {/* Back Button */}
-          <TouchableOpacity style={styles.navButton} onPress={handleGoBack}>
+        <View style={[styles.pdfContainer, !showPdf && styles.hidden]}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowPdf(false)}>
             <Image
-              source={require('../../../assets/icons/back.png')}
-              style={styles.navIcon}
-              resizeMode="contain"
+              source={require('../../../assets/icons/cross.png')}
+              style={styles.closeIcon}
             />
           </TouchableOpacity>
-
-          {/* Forward Button */}
-          <TouchableOpacity style={styles.navButton} onPress={handleGoForward}>
-            <Image
-              source={require('../../../assets/icons/forward.png')}
-              style={styles.navIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-
-          {/* Refresh Button */}
-          <TouchableOpacity style={styles.navButton} onPress={handleRefresh}>
-            <Image
-              source={require('../../../assets/icons/refresh.png')}
-              style={styles.navIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
+   
+          <Pdf
+            trustAllCerts={false}
+            source={{ uri: pdfUrl, cache: true }}
+            onLoadComplete={(numberOfPages, filePath) => {
+              console.log(`Number of pages: ${numberOfPages}`);
+            }}
+            onPageChanged={(page, numberOfPages) => {
+              console.log(`Current page: ${page}`);
+            }}
+            onError={(error) => {
+              console.error(error);
+            }}
+            onPressLink={(uri) => {
+              console.log(`Link pressed: ${uri}`);
+            }}
+            style={[
+              styles.pdf,
+              { width: pdfDimensions.width, height: pdfDimensions.height },
+            ]}
+          />
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -186,47 +195,55 @@ const styles = StyleSheet.create({
     borderBottomColor: '#D1D1D1',
     paddingHorizontal: 10,
   },
-  logo: {
-    width: 100,
-    height: 60,
-    resizeMode: 'cover',
+  webViewContainer: {
+    flex: 1,
   },
-  notification: {
-    padding: 10,
-    marginLeft: -10,
-  },
-  notificationImage: {
-    width: 24,
-    height: 24,
-    tintColor:'white'
-
+  hidden: {
+    display: 'none',
   },
   webView: {
     flex: 1,
     backgroundColor: 'white',
   },
-  loaderContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -50 }, { translateY: -50 }],
-    zIndex: 10,
+  pdfContainer: {
+    flex: 1,
+    position: 'relative',
   },
-  bottomNav: {
+  closeButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 1,
+  },
+  closeIcon: {
+    width: 30,
+    height: 30,
+    tintColor: 'black',
+  },
+  pdf: {
+    flex: 1,
+  },
+  navigationContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     padding: 10,
     backgroundColor: '#3E5B66',
-    borderTopWidth: 1,
-    borderTopColor: '#D1D1D1',
   },
   navButton: {
-    padding: 10,
+    
+    backgroundColor: '#F1F1F1',
+    borderRadius: 5,
+    width : 30,
+    height : 30,
+    alignItems : 'center',
+    justifyContent : 'center'
   },
-  navIcon: {
-    width: 24,
-    height: 24,
-    tintColor:'white'
+  disabledButton: {
+    backgroundColor: '#CCCCCC',
+  },
+  navText: {
+    color: '#000',
+    fontWeight: 'bold',
   },
 });
 
